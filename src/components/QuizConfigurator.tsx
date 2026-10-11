@@ -216,38 +216,24 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
       };
       reader.readAsText(file);
     } else {
-      // PDF, Images, or docs sent as base64
+      // PDF, Images, or docs sent as base64 for native multimodal AI parsing
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
         const base64Data = result.split(',')[1];
-
-        // Attempt client-side text extraction from PDF or document binary
-        let extractedText = '';
-        try {
-          const binaryStr = atob(base64Data);
-          const matches = binaryStr.match(/[a-zA-Z0-9.,;:!?'"()\-\s]{4,}/g);
-          if (matches && matches.length > 5) {
-            extractedText = matches.join(' ').replace(/\s+/g, ' ').slice(0, 12000);
-          }
-        } catch {
-          // ignore
-        }
+        const mimeType = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');
 
         setSelectedFile({
           name: file.name,
           size: file.size,
-          mimeType: file.type || 'application/octet-stream',
+          mimeType,
           base64Data,
-          textContent: extractedText || undefined,
         });
 
-        if (extractedText && !textInput.trim()) {
-          setTextInput(extractedText);
-        }
-
+        // Clear any previous raw text input so the multimodal file is used cleanly
+        setTextInput('');
         setCustomTitle(file.name.replace(/\.[^/.]+$/, '') + ' Quiz');
-        updateDocumentStats(file.name, extractedText || '');
+        updateDocumentStats(file.name, '');
       };
       reader.readAsDataURL(file);
     }

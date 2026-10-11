@@ -17,22 +17,33 @@ function getGeminiClient(): GoogleGenAI | null {
   });
 }
 
-function extractTextFromFileData(base64Data?: string, mimeType?: string): string {
+async function extractTextFromFileData(base64Data?: string, mimeType?: string): Promise<string> {
   if (!base64Data) return '';
   try {
     const buffer = Buffer.from(base64Data, 'base64');
-    const raw = buffer.toString('utf-8');
     if (
       mimeType?.startsWith('text/') ||
       mimeType?.includes('json') ||
       mimeType?.includes('csv') ||
       mimeType?.includes('markdown')
     ) {
-      return raw;
+      return buffer.toString('utf-8');
     }
-    const matches = raw.match(/[a-zA-Z0-9.,;:!?'"()\-\s]{4,}/g);
-    if (matches && matches.length > 5) {
-      return matches.join(' ').replace(/\s+/g, ' ').slice(0, 12000);
+    // For PDFs, use real PDFParse to extract clean page text (not raw binary zlib streams)
+    if (mimeType?.includes('pdf') || mimeType === 'application/pdf') {
+      try {
+        const { createRequire } = await import('module');
+        const require = createRequire(import.meta.url);
+        const { PDFParse } = require('pdf-parse');
+        const parser = new PDFParse(new Uint8Array(buffer));
+        await parser.load();
+        const res = await parser.getText();
+        if (res?.text && res.text.trim().length > 25) {
+          return res.text.trim().slice(0, 50000);
+        }
+      } catch (pdfErr) {
+        console.warn('PDF parsing error on Vercel:', pdfErr);
+      }
     }
   } catch {
     // ignore
@@ -106,7 +117,7 @@ export default async function handler(req: any, res: any) {
     );
 
     const docName = fileData?.filename || 'Uploaded Document';
-    const effectiveText = (content || '').trim() || extractTextFromFileData(fileData?.data, fileData?.mimeType);
+    const effectiveText = (content || '').trim() || (await extractTextFromFileData(fileData?.data, fileData?.mimeType));
 
     const ai = getGeminiClient();
 

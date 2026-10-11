@@ -44,24 +44,34 @@ function getGeminiClient(): GoogleGenAI | null {
   });
 }
 
-// Helper to extract textual content from uploaded fileData (base64)
-function extractTextFromFileData(base64Data?: string, mimeType?: string): string {
+// Helper to extract real textual content from uploaded fileData (base64)
+async function extractTextFromFileData(base64Data?: string, mimeType?: string): Promise<string> {
   if (!base64Data) return '';
   try {
     const buffer = Buffer.from(base64Data, 'base64');
-    const raw = buffer.toString('utf-8');
     if (
       mimeType?.startsWith('text/') ||
       mimeType?.includes('json') ||
       mimeType?.includes('csv') ||
       mimeType?.includes('markdown')
     ) {
-      return raw;
+      return buffer.toString('utf-8');
     }
-    // For PDFs or other files, extract printable word clusters
-    const matches = raw.match(/[a-zA-Z0-9.,;:!?'"()\-\s]{4,}/g);
-    if (matches && matches.length > 5) {
-      return matches.join(' ').replace(/\s+/g, ' ').slice(0, 12000);
+    // For PDFs, use real PDFParse to extract clean page text (not raw binary zlib streams)
+    if (mimeType?.includes('pdf') || mimeType === 'application/pdf') {
+      try {
+        const { createRequire } = await import('module');
+        const require = createRequire(import.meta.url);
+        const { PDFParse } = require('pdf-parse');
+        const parser = new PDFParse(new Uint8Array(buffer));
+        await parser.load();
+        const res = await parser.getText();
+        if (res?.text && res.text.trim().length > 25) {
+          return res.text.trim().slice(0, 50000);
+        }
+      } catch (pdfErr) {
+        console.warn('PDF parsing error:', pdfErr);
+      }
     }
   } catch {
     // ignore
@@ -139,7 +149,7 @@ app.post('/api/generate-quiz', async (req, res) => {
     );
 
     const docName = fileData?.filename || 'Uploaded Document';
-    const effectiveText = (content || '').trim() || extractTextFromFileData(fileData?.data, fileData?.mimeType);
+    const effectiveText = (content || '').trim() || (await extractTextFromFileData(fileData?.data, fileData?.mimeType));
 
     const ai = getGeminiClient();
 
@@ -432,7 +442,10 @@ async function startServer() {
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: false, // Explicitly disable Vite HMR WebSocket in middleware mode to eliminate WebSocket closed errors
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

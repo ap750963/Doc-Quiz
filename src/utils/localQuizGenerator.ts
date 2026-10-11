@@ -27,9 +27,28 @@ export function generateLocalQuiz({
 }: GenerateLocalQuizOptions): Quiz {
   const cleanText = text.trim();
   let sentences = cleanText
-    .split(/(?<=[.?!])\s+/)
+    .split(/(?<=[.?!])\s+|\n{2,}/)
     .map((s) => s.trim())
-    .filter((s) => s.length > 25 && s.length < 300);
+    .filter((s) => {
+      if (s.length < 20 || s.length > 350) return false;
+      // Reject binary PDF streams, PostScript tokens, or junk fragments
+      if (/\b(FlateDecode|xref|trailer|endobj|startxref|MediaBox|FontFile)\b/i.test(s)) return false;
+      const alphaWords = s.match(/[A-Za-z]{2,}/g) || [];
+      if (alphaWords.length < 4) return false;
+      const nonAlpha = s.replace(/[A-Za-z0-9\s.,?!'"-]/g, '').length;
+      if (nonAlpha / s.length > 0.2) return false; // Reject high-symbol-density binary noise
+      return true;
+    });
+
+  if (sentences.length === 0) {
+    const docTopic = (sourceDocumentName || 'Document Study').replace(/\.[^/.]+$/, '');
+    sentences = [
+      `${docTopic} covers fundamental principles, foundational structures, and technical methodologies.`,
+      `Students examine core terminology, systematic operations, and practical applications in ${docTopic}.`,
+      `Understanding the relationship between cause, mechanism, and effect is essential to mastering ${docTopic}.`,
+      `Analytical evaluation and thorough conceptual recall reinforce long-term mastery of ${docTopic}.`,
+    ];
+  }
 
   // If avoiding previous questions, filter or rotate sentences
   const avoidSet = new Set(avoidQuestions.map((q) => q.toLowerCase().slice(0, 40)));
@@ -47,7 +66,8 @@ export function generateLocalQuiz({
     sentences = sentences.sort((a, b) => ((a.length * 31 + shift) % 17) - ((b.length * 31 + shift) % 17));
   }
 
-  const words = cleanText.match(/\b[A-Z][a-z]{3,}\b|\b[a-z]{5,}\b/g) || [
+  const sentencesText = sentences.join(' ');
+  const words = sentencesText.match(/\b[A-Za-z]{4,}\b/g) || [
     'Concept',
     'Structure',
     'Process',
@@ -55,7 +75,7 @@ export function generateLocalQuiz({
     'Analysis',
     'Function',
   ];
-  const uniqueWords = Array.from(new Set(words));
+  const uniqueWords = Array.from(new Set(words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())));
 
   const count = Math.min(Math.max(1, numQuestions), Math.max(1, sentences.length * 2, 50));
   const questions: Question[] = [];
