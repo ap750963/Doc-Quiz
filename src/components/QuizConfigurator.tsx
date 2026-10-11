@@ -752,56 +752,61 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
           )}
         </div>
 
-        {/* Step 2: Question Types & Difficulty */}
-        <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/40">
-          <div className="flex items-center justify-between mb-5">
+        {/* Step 2: Question Types */}
+        <div className="p-5 sm:p-7 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/40">
+          <div className="flex items-center justify-between gap-3 mb-4">
             <div>
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center">
                   2
                 </span>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white font-display">
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-display">
                   Customize Question Types
                 </h2>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 ml-8">
-                Select one or multiple question formats to include in the quiz.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 ml-8 hidden sm:block">
+                Choose one or more question formats for your quiz.
               </p>
             </div>
             <button
               type="button"
               onClick={selectAllTypes}
-              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium cursor-pointer"
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold cursor-pointer shrink-0"
             >
               Select All
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* 4 Rounded Rectangle Buttons Placed Horizontally */}
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
             {[
               {
                 id: 'multiple_choice' as QuestionType,
                 title: 'Multiple Choice',
+                shortTitle: 'MCQ',
+                icon: '🔘',
                 desc: 'Single correct answer from 4 choices',
-                badge: '4 Options',
               },
               {
                 id: 'true_false' as QuestionType,
                 title: 'True / False',
+                shortTitle: 'T / F',
+                icon: '⚖️',
                 desc: 'Binary statements to verify',
-                badge: 'Binary',
               },
               {
                 id: 'multiple_answer' as QuestionType,
-                title: 'Multiple Answer',
-                desc: 'Check all that apply (2+ correct)',
-                badge: 'Multi-select',
+                title: 'Multi-Answer',
+                shortTitle: 'Multi',
+                icon: '☑️',
+                desc: 'Check all correct choices (2+)',
               },
               {
                 id: 'fill_blank' as QuestionType,
                 title: 'Fill in Blank',
-                desc: 'Recall and type the missing keyword',
-                badge: 'Recall',
+                shortTitle: 'Blanks',
+                icon: '✍️',
+                desc: 'Recall & type missing keyword',
               },
             ].map((type) => {
               const isChecked = questionTypes.includes(type.id);
@@ -810,73 +815,81 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                   key={type.id}
                   type="button"
                   onClick={() => toggleQuestionType(type.id)}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative ${
+                  title={type.desc}
+                  className={`w-full min-w-0 py-2.5 sm:py-3 px-1 sm:px-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 relative ${
                     isChecked
-                      ? 'border-indigo-600 dark:border-indigo-500 bg-white dark:bg-slate-800 shadow-sm ring-2 ring-indigo-500/20'
-                      : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 opacity-70'
+                      ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20 shadow-xs font-bold'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white font-medium'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{type.badge}</span>
-                    <div
-                      className={`w-4 h-4 rounded-md flex items-center justify-center transition-colors ${
-                        isChecked ? 'bg-indigo-600 text-white' : 'border border-slate-300 dark:border-slate-600'
-                      }`}
-                    >
-                      {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                    </div>
-                  </div>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">{type.title}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{type.desc}</p>
+                  <span className="text-sm sm:text-base shrink-0 leading-none">{type.icon}</span>
+                  <span className="text-[11px] sm:text-xs md:text-sm truncate">
+                    <span className="sm:hidden">{type.shortTitle}</span>
+                    <span className="hidden sm:inline">{type.title}</span>
+                  </span>
+                  {isChecked && (
+                    <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 ml-0.5 sm:ml-1 text-[10px]">
+                      <Check className="w-2.5 h-2.5 stroke-[3]" />
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center justify-between">
+            <span>
+              {questionTypes.length === 4
+                ? 'All 4 question formats active for maximum cognitive variety.'
+                : `${questionTypes.length} question format${questionTypes.length === 1 ? '' : 's'} enabled.`}
+            </span>
+            <span className="hidden sm:inline text-slate-400 dark:text-slate-500">Tap buttons to toggle</span>
+          </p>
         </div>
 
         {/* Step 3: Difficulty Levels */}
-        <div className="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800">
+        <div className="p-5 sm:p-7 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 mb-1">
             <span className="w-6 h-6 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300 text-xs font-bold flex items-center justify-center">
               3
             </span>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white font-display">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-display">
               Difficulty Level
             </h2>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 ml-8">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 ml-8 hidden sm:block">
             Tailor the cognitive challenge to your learning goals.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          {/* 4 Rounded Rectangle Buttons Placed Horizontally */}
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
             {[
               {
                 id: 'easy' as DifficultyLevel,
                 title: 'Easy',
                 icon: '🌱',
                 desc: 'Direct recall, definitions & core facts',
-                accent: 'border-emerald-500 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300',
+                activeClass: 'border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20',
               },
               {
                 id: 'medium' as DifficultyLevel,
                 title: 'Medium',
                 icon: '⚡',
-                desc: 'Comprehension & cause-and-effect',
-                accent: 'border-indigo-500 dark:border-indigo-400 text-indigo-700 dark:text-indigo-300',
+                desc: 'Comprehension & cause-and-effect reasoning',
+                activeClass: 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20',
               },
               {
                 id: 'hard' as DifficultyLevel,
                 title: 'Hard',
                 icon: '🔥',
-                desc: 'Deep analysis, synthesis & edge cases',
-                accent: 'border-rose-500 dark:border-rose-400 text-rose-700 dark:text-rose-300',
+                desc: 'Deep analytical synthesis, edge cases & nuances',
+                activeClass: 'border-rose-500 dark:border-rose-400 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20',
               },
               {
                 id: 'mixed' as DifficultyLevel,
                 title: 'Mixed',
                 icon: '🎲',
-                desc: 'Balanced progression from Easy to Hard',
-                accent: 'border-violet-500 dark:border-violet-400 text-violet-700 dark:text-violet-300',
+                desc: 'Dynamic progressive mix from Easy to Hard',
+                activeClass: 'border-violet-500 dark:border-violet-400 bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 ring-2 ring-violet-500/20',
               },
             ].map((level) => {
               const isSelected = difficulty === level.id;
@@ -888,24 +901,31 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                     sound.playClick();
                     setDifficulty(level.id);
                   }}
-                  className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                  title={level.desc}
+                  className={`w-full min-w-0 py-2.5 sm:py-3 px-1 sm:px-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
                     isSelected
-                      ? `bg-white dark:bg-slate-800 shadow-md ring-2 ring-indigo-500/20 ${level.accent} font-semibold`
-                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'
+                      ? `${level.activeClass} shadow-xs font-bold`
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white font-medium'
                   }`}
                 >
-                  <div className="text-2xl mb-2">{level.icon}</div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{level.title}</p>
-                    {isSelected && (
-                      <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400"></span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{level.desc}</p>
+                  <span className="text-sm sm:text-base shrink-0 leading-none">{level.icon}</span>
+                  <span className="text-[11px] sm:text-xs md:text-sm truncate font-bold">{level.title}</span>
                 </button>
               );
             })}
           </div>
+
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 truncate">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
+              {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}:
+            </span>
+            <span>
+              {difficulty === 'easy' && 'Direct recall, definitions & core facts'}
+              {difficulty === 'medium' && 'Comprehension & cause-and-effect reasoning'}
+              {difficulty === 'hard' && 'Deep analytical synthesis, edge cases & nuances'}
+              {difficulty === 'mixed' && 'Balanced progression from Easy to Hard'}
+            </span>
+          </p>
         </div>
 
         {/* Step 4: Mode, Count & Vibe */}
@@ -1135,7 +1155,7 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
             </div>
 
             {/* Variety & Focus Angle */}
-            <div className="md:col-span-3 pt-6 border-t border-slate-200/80 dark:border-slate-800">
+            <div className="md:col-span-3 pt-5 border-t border-slate-200/80 dark:border-slate-800">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
                   <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
@@ -1148,46 +1168,41 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                  {focusAngle === 'balanced' && 'Covers a balanced, representative cross-section'}
-                  {focusAngle === 'deep_dive' && 'Explores technical nuances, fine details & edge cases'}
-                  {focusAngle === 'practical' && 'Tests real-world applications & causes/effects'}
-                  {focusAngle === 'quick_recall' && 'Focuses on vocabulary, key terms & definitions'}
-                  {focusAngle === 'random_shuffle' && 'Maximizes variety with secondary & surprising angles'}
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
+                  Steers generation perspective across repeat quizzes
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+              {/* 4 Rounded Rectangle Buttons Placed Horizontally */}
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
                 {[
                   {
                     id: 'balanced' as FocusAngle,
                     title: 'Balanced',
-                    desc: 'Whole document',
+                    shortTitle: 'Balanced',
                     icon: '⚖️',
+                    desc: 'Covers a balanced, representative cross-section of the entire document',
                   },
                   {
                     id: 'deep_dive' as FocusAngle,
                     title: 'Deep Dive',
-                    desc: 'Nuances & details',
+                    shortTitle: 'Deep Dive',
                     icon: '🔬',
+                    desc: 'Explores technical nuances, fine details and complex concepts',
                   },
                   {
                     id: 'practical' as FocusAngle,
                     title: 'Practical',
-                    desc: 'Real-world scenarios',
+                    shortTitle: 'Practical',
                     icon: '🛠️',
-                  },
-                  {
-                    id: 'quick_recall' as FocusAngle,
-                    title: 'Key Terms',
-                    desc: 'Vocab & definitions',
-                    icon: '💡',
+                    desc: 'Tests real-world applications, scenarios and cause-and-effect reasoning',
                   },
                   {
                     id: 'random_shuffle' as FocusAngle,
                     title: 'Surprise Me',
-                    desc: 'Unexplored angles',
+                    shortTitle: 'Surprise',
                     icon: '🔀',
+                    desc: 'Maximizes variety with unexplored angles and secondary facts',
                   },
                 ].map((angle) => {
                   const isSelected = focusAngle === angle.id;
@@ -1199,21 +1214,39 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                         sound.playClick();
                         setFocusAngle(angle.id);
                       }}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      title={angle.desc}
+                      className={`w-full min-w-0 py-2.5 sm:py-3 px-1 sm:px-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
                         isSelected
-                          ? 'border-indigo-600 dark:border-indigo-500 bg-white dark:bg-slate-800 shadow-xs ring-2 ring-indigo-500/20'
-                          : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'
+                          ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20 shadow-xs font-bold'
+                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-white font-medium'
                       }`}
                     >
-                      <span className="text-lg block mb-1">{angle.icon}</span>
-                      <p className="text-xs font-bold text-slate-900 dark:text-white">{angle.title}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">
-                        {angle.desc}
-                      </p>
+                      <span className="text-sm sm:text-base shrink-0 leading-none">{angle.icon}</span>
+                      <span className="text-[11px] sm:text-xs md:text-sm truncate font-bold">
+                        <span className="sm:hidden">{angle.shortTitle}</span>
+                        <span className="hidden sm:inline">{angle.title}</span>
+                      </span>
                     </button>
                   );
                 })}
               </div>
+
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 truncate">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  {focusAngle === 'balanced' && 'Balanced:'}
+                  {focusAngle === 'deep_dive' && 'Deep Dive:'}
+                  {focusAngle === 'practical' && 'Practical:'}
+                  {focusAngle === 'random_shuffle' && 'Surprise Me:'}
+                  {focusAngle === 'quick_recall' && 'Key Terms:'}
+                </span>
+                <span>
+                  {focusAngle === 'balanced' && 'Covers a balanced, representative cross-section of the entire document'}
+                  {focusAngle === 'deep_dive' && 'Explores technical nuances, fine details and complex concepts'}
+                  {focusAngle === 'practical' && 'Tests real-world applications, scenarios and cause-and-effect reasoning'}
+                  {focusAngle === 'random_shuffle' && 'Maximizes variety with unexplored angles and secondary facts'}
+                  {focusAngle === 'quick_recall' && 'Focuses on vocabulary, key terms & definitions'}
+                </span>
+              </p>
             </div>
           </div>
         </div>
