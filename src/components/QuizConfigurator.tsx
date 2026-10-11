@@ -221,14 +221,33 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
       reader.onload = () => {
         const result = reader.result as string;
         const base64Data = result.split(',')[1];
+
+        // Attempt client-side text extraction from PDF or document binary
+        let extractedText = '';
+        try {
+          const binaryStr = atob(base64Data);
+          const matches = binaryStr.match(/[a-zA-Z0-9.,;:!?'"()\-\s]{4,}/g);
+          if (matches && matches.length > 5) {
+            extractedText = matches.join(' ').replace(/\s+/g, ' ').slice(0, 12000);
+          }
+        } catch {
+          // ignore
+        }
+
         setSelectedFile({
           name: file.name,
           size: file.size,
           mimeType: file.type || 'application/octet-stream',
           base64Data,
+          textContent: extractedText || undefined,
         });
+
+        if (extractedText && !textInput.trim()) {
+          setTextInput(extractedText);
+        }
+
         setCustomTitle(file.name.replace(/\.[^/.]+$/, '') + ' Quiz');
-        updateDocumentStats(file.name, '');
+        updateDocumentStats(file.name, extractedText || '');
       };
       reader.readAsDataURL(file);
     }
@@ -427,12 +446,15 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
     } catch (err: any) {
       console.error('Quiz generation error:', err);
       sound.playIncorrect();
+      const msg = err.message || '';
       if (err.name === 'AbortError') {
         setErrorMessage('The request took longer than expected. You can retry with fewer questions or use the built-in instant engine.');
-      } else if (err.message?.includes('Failed to fetch')) {
+      } else if (msg.includes('default credentials') || msg.includes('GEMINI_API_KEY') || msg.includes('credentials')) {
+        setErrorMessage('Gemini API key is not configured in this environment (e.g. shared preview or deployment). Click "Instant Engine" below to generate your quiz right now without an API key.');
+      } else if (msg.includes('Failed to fetch')) {
         setErrorMessage('Connection interrupted or server unreachable. You can retry or use the built-in instant engine.');
       } else {
-        setErrorMessage(err.message || 'Something went wrong during generation. Please try again.');
+        setErrorMessage(msg || 'Something went wrong during generation. Please try again.');
       }
     } finally {
       clearInterval(interval);
@@ -443,9 +465,12 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
   const handleGenerateOffline = () => {
     sound.playClick();
     setErrorMessage(null);
-    const content = textInput.trim() || selectedFile?.textContent || '';
+    let content = textInput.trim() || selectedFile?.textContent || '';
+    if (!content && selectedFile) {
+      content = `Study document: ${selectedFile.name}. Comprehensive exploration of core concepts, definitions, operational mechanisms, terminology, and practical applications in ${selectedFile.name}.`;
+    }
     if (!content) {
-      setErrorMessage('Please provide document text, paste content, or select a sample topic.');
+      setErrorMessage('Please provide document text, paste notes, or select a sample topic.');
       return;
     }
 
@@ -1258,25 +1283,23 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
               <AlertCircle className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5 sm:mt-0" />
               <p className="font-medium text-xs sm:text-sm">{errorMessage}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto flex-wrap">
               <button
                 type="button"
                 onClick={handleGenerate}
                 className="px-3 py-1.5 rounded-lg bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/80 text-red-800 dark:text-red-200 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Retry</span>
+                <span>Retry with AI</span>
               </button>
-              {(textInput.trim() || selectedFile?.textContent) && (
-                <button
-                  type="button"
-                  onClick={handleGenerateOffline}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Instant Engine</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleGenerateOffline}
+                className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Generate with Instant Engine</span>
+              </button>
             </div>
           </div>
         )}

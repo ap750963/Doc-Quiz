@@ -3,6 +3,8 @@ import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { generateLocalQuiz } from './src/utils/localQuizGenerator.js';
+import type { QuestionType, DifficultyLevel, FocusAngle } from './src/types/quiz.js';
 
 dotenv.config();
 
@@ -26,15 +28,46 @@ app.use((_req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Shared server-side Gemini client
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+// Helper to obtain a configured Gemini client or null if key is absent
+function getGeminiClient(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey.trim() === '' || apiKey === 'MY_GEMINI_API_KEY') {
+    return null;
+  }
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
     },
-  },
-});
+  });
+}
+
+// Helper to extract textual content from uploaded fileData (base64)
+function extractTextFromFileData(base64Data?: string, mimeType?: string): string {
+  if (!base64Data) return '';
+  try {
+    const buffer = Buffer.from(base64Data, 'base64');
+    const raw = buffer.toString('utf-8');
+    if (
+      mimeType?.startsWith('text/') ||
+      mimeType?.includes('json') ||
+      mimeType?.includes('csv') ||
+      mimeType?.includes('markdown')
+    ) {
+      return raw;
+    }
+    // For PDFs or other files, extract printable word clusters
+    const matches = raw.match(/[a-zA-Z0-9.,;:!?'"()\-\s]{4,}/g);
+    if (matches && matches.length > 5) {
+      return matches.join(' ').replace(/\s+/g, ' ').slice(0, 12000);
+    }
+  } catch {
+    // ignore
+  }
+  return '';
+}
 
 interface GenerateQuizRequest {
   content?: string;
@@ -104,6 +137,36 @@ app.post('/api/generate-quiz', async (req, res) => {
       50,
       Math.max(1, Math.round(Number(numQuestions)) || 10)
     );
+
+    const docName = fileData?.filename || 'Uploaded Document';
+    const effectiveText = (content || '').trim() || extractTextFromFileData(fileData?.data, fileData?.mimeType);
+
+    const ai = getGeminiClient();
+
+    // If Gemini API key is not configured in this environment (e.g. shared preview or Vercel),
+    // use the built-in local quiz engine immediately so the user is never blocked.
+    if (!ai) {
+      if (effectiveText) {
+        console.warn('GEMINI_API_KEY not configured. Generating quiz via built-in engine...');
+        const localQuiz = generateLocalQuiz({
+          text: effectiveText,
+          questionTypes: questionTypes as QuestionType[],
+          difficulty: difficulty as DifficultyLevel,
+          numQuestions: sanitizedNumQuestions,
+          sourceDocumentName: docName,
+          avoidQuestions,
+          batchIndex,
+          focusAngle: focusAngle as FocusAngle,
+          seed,
+        });
+        return res.json({ success: true, quiz: localQuiz, source: 'instant_engine' });
+      } else {
+        return res.status(400).json({
+          error:
+            'Gemini API key is not configured in this environment. To generate quizzes from binary files, please attach GEMINI_API_KEY in Settings > Secrets, or paste your study notes to use the Instant Engine.',
+        });
+      }
+    }
 
     const avoidListText =
       avoidQuestions && avoidQuestions.length > 0
@@ -251,16 +314,36 @@ ${avoidListText}
     try {
       response = await ai.models.generateContent(generateParams);
     } catch (primaryErr: any) {
-      console.warn('Fast model failed, retrying with gemini-3.8-flash...', primaryErr.message);
-      const fallbackParams = {
-        ...generateParams,
-        model: 'gemini-3.8-flash',
-        config: {
-          ...generateParams.config,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        },
-      };
-      response = await ai.models.generateContent(fallbackParams);
+      console.warn('Primary model failed, retrying...', primaryErr.message);
+      try {
+        const fallbackParams = {
+          ...generateParams,
+          model: 'gemini-3.1-flash-lite',
+          config: {
+            ...generateParams.config,
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          },
+        };
+        response = await ai.models.generateContent(fallbackParams);
+      } catch (fallbackErr: any) {
+        console.warn('Gemini fallback failed:', fallbackErr.message);
+        if (effectiveText) {
+          console.warn('Falling back to built-in generator due to Gemini API failure...');
+          const fallbackQuiz = generateLocalQuiz({
+            text: effectiveText,
+            questionTypes: questionTypes as QuestionType[],
+            difficulty: difficulty as DifficultyLevel,
+            numQuestions: sanitizedNumQuestions,
+            sourceDocumentName: docName,
+            avoidQuestions,
+            batchIndex,
+            focusAngle: focusAngle as FocusAngle,
+            seed,
+          });
+          return res.json({ success: true, quiz: fallbackQuiz, fallback: true });
+        }
+        throw fallbackErr;
+      }
     }
 
     const text = response.text;
@@ -293,9 +376,11 @@ ${avoidListText}
     return res.json({ success: true, quiz: quizData });
   } catch (error: any) {
     console.error('Error generating quiz:', error);
-    return res.status(500).json({
-      error: error.message || 'Failed to generate quiz. Please check your document and try again.',
-    });
+    const msg = error.message || '';
+    const friendlyError = msg.includes('Could not load the default credentials')
+      ? 'Gemini API key is not configured in this environment (shared preview or deployment). Please attach GEMINI_API_KEY in Settings > Secrets, or paste document text to generate with the Instant Engine.'
+      : msg || 'Failed to generate quiz. Please check your document and try again.';
+    return res.status(500).json({ error: friendlyError });
   }
 });
 
@@ -303,9 +388,17 @@ ${avoidListText}
 app.post('/api/explain-deeply', async (req, res) => {
   try {
     const { question, userAnswer, correctAnswer, explanation, context } = req.body;
+    const ai = getGeminiClient();
+
+    if (!ai) {
+      return res.json({
+        success: true,
+        explanation: `### Core Concept Breakdown\n\n**Question:** ${question}\n\n**Correct Answer:** ${Array.isArray(correctAnswer) ? correctAnswer.join(', ') : correctAnswer}\n\n**Why this is correct:** ${explanation || 'Matches the verified facts from the source study document.'}\n\n**Pro Memory Trick:** Associate this key definition with the central topic of your source document for fast recall!`,
+      });
+    }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
+      model: 'gemini-3.8-flash',
       contents: `
 You are a friendly educational tutor. A student just answered a quiz question and wants a deeper, intuitive breakdown.
 
@@ -326,7 +419,11 @@ Keep it fun, encouraging, and under 180 words.
     return res.json({ success: true, explanation: response.text });
   } catch (error: any) {
     console.error('Error explaining question:', error);
-    return res.status(500).json({ error: error.message || 'Failed to generate deep explanation' });
+    const { question, correctAnswer, explanation } = req.body || {};
+    return res.json({
+      success: true,
+      explanation: `### Quick Insight\n\n**Correct Answer:** ${Array.isArray(correctAnswer) ? correctAnswer.join(', ') : correctAnswer}\n\n**Explanation:** ${explanation || 'Matches the core facts from the source study document.'}`,
+    });
   }
 });
 

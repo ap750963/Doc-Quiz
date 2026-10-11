@@ -1,4 +1,4 @@
-import { Quiz, Question, QuestionType, DifficultyLevel, FocusAngle } from '../types/quiz';
+import type { Quiz, Question, QuestionType, DifficultyLevel, FocusAngle } from '../types/quiz.js';
 
 interface GenerateLocalQuizOptions {
   text: string;
