@@ -1,0 +1,6 @@
+{
+  "name": "DocuQuiz - AI Interactive Quiz Generator",
+  "description": "Generate fun, engaging interactive quizzes from any document with customizable question types and difficulty levels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

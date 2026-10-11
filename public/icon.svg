@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+    <linearGradient id="sparkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#1e1b4b" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- App Background Squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad)" />
+
+  <!-- Document Card Plate with Shadow -->
+  <g filter="url(#dropShadow)">
+    <rect x="100" y="96" width="312" height="320" rx="36" fill="url(#cardGrad)" />
+  </g>
+
+  <!-- Document Header Lines -->
+  <rect x="140" y="148" width="130" height="20" rx="10" fill="#4f46e5" />
+  <rect x="140" y="186" width="232" height="12" rx="6" fill="#cbd5e1" />
+  <rect x="140" y="210" width="180" height="12" rx="6" fill="#e2e8f0" />
+
+  <!-- Interactive Quiz Choice Options -->
+  <!-- Option 1: Selected / Correct (Checkmark) -->
+  <rect x="140" y="252" width="232" height="44" rx="14" fill="#e0e7ff" stroke="#6366f1" stroke-width="2.5" />
+  <circle cx="168" cy="274" r="14" fill="#4f46e5" />
+  <path d="M162 274 L166 278 L174 270" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <rect x="194" y="268" width="110" height="12" rx="6" fill="#312e81" />
+
+  <!-- Option 2: Choice B -->
+  <rect x="140" y="310" width="232" height="44" rx="14" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2" />
+  <circle cx="168" cy="332" r="14" fill="#e2e8f0" />
+  <text x="168" y="337" font-family="sans-serif" font-weight="bold" font-size="13" fill="#64748b" text-anchor="middle">B</text>
+  <rect x="194" y="326" width="140" height="12" rx="6" fill="#94a3b8" />
+
+  <!-- Sparkling Star Badge in Top Right -->
+  <g transform="translate(352, 70)">
+    <circle cx="36" cy="36" r="38" fill="url(#sparkGrad)" filter="url(#dropShadow)" />
+    <!-- 4-point star -->
+    <path d="M36 14 C36 28 36 28 22 36 C36 44 36 44 36 58 C36 44 36 44 50 36 C36 28 36 28 36 14 Z" fill="#ffffff" />
+  </g>
+</svg>
