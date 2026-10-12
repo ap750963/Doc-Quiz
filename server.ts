@@ -63,10 +63,11 @@ async function extractTextFromFileData(base64Data?: string, mimeType?: string): 
         const { createRequire } = await import('module');
         const require = createRequire(import.meta.url);
         const { PDFParse } = require('pdf-parse');
-        const parser = new PDFParse(new Uint8Array(buffer));
+        const parser = new PDFParse({ data: buffer });
         await parser.load();
         const res = await parser.getText();
-        if (res?.text && res.text.trim().length > 25) {
+        await parser.destroy().catch(() => {});
+        if (res?.text && res.text.trim().length > 20) {
           return res.text.trim().slice(0, 50000);
         }
       } catch (pdfErr) {
@@ -78,6 +79,20 @@ async function extractTextFromFileData(base64Data?: string, mimeType?: string): 
   }
   return '';
 }
+
+// Endpoint to extract clean plain text from uploaded files
+app.post('/api/extract-text', async (req, res) => {
+  try {
+    const { fileData } = req.body;
+    if (!fileData?.data) {
+      return res.status(400).json({ error: 'No file data provided.' });
+    }
+    const text = await extractTextFromFileData(fileData.data, fileData.mimeType);
+    return res.json({ success: true, text });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || 'Failed to extract text from document.' });
+  }
+});
 
 interface GenerateQuizRequest {
   content?: string;

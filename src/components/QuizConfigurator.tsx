@@ -218,7 +218,7 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
     } else {
       // PDF, Images, or docs sent as base64 for native multimodal AI parsing
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         const result = reader.result as string;
         const base64Data = result.split(',')[1];
         const mimeType = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');
@@ -234,6 +234,30 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
         setTextInput('');
         setCustomTitle(file.name.replace(/\.[^/.]+$/, '') + ' Quiz');
         updateDocumentStats(file.name, '');
+
+        // Attempt server-side text extraction for instant offline availability & word stats
+        if (mimeType.includes('pdf') || mimeType.startsWith('text/')) {
+          try {
+            const extractRes = await fetch('/api/extract-text', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileData: { data: base64Data, mimeType, filename: file.name },
+              }),
+            });
+            if (extractRes.ok) {
+              const { text } = await extractRes.json();
+              if (text && text.trim().length > 0) {
+                setSelectedFile((prev) =>
+                  prev ? { ...prev, textContent: text } : prev
+                );
+                updateDocumentStats(file.name, text);
+              }
+            }
+          } catch {
+            // Silently continue if background text extraction fails
+          }
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -451,12 +475,11 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
   const handleGenerateOffline = () => {
     sound.playClick();
     setErrorMessage(null);
-    let content = textInput.trim() || selectedFile?.textContent || '';
-    if (!content && selectedFile) {
-      content = `Study document: ${selectedFile.name}. Comprehensive exploration of core concepts, definitions, operational mechanisms, terminology, and practical applications in ${selectedFile.name}.`;
-    }
+    const content = textInput.trim() || selectedFile?.textContent || '';
     if (!content) {
-      setErrorMessage('Please provide document text, paste notes, or select a sample topic.');
+      setErrorMessage(
+        'The Instant Engine requires readable text. Please paste your text directly into the text area or select a document with extractable text.'
+      );
       return;
     }
 
@@ -468,18 +491,26 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
     const batchIndex = currentBatchNumber;
     const seed = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    const localQuiz = generateLocalQuiz({
-      text: content,
-      questionTypes,
-      difficulty,
-      numQuestions,
-      customTitle: customTitle.trim(),
-      sourceDocumentName: docName,
-      avoidQuestions,
-      batchIndex,
-      focusAngle,
-      seed,
-    });
+    let localQuiz;
+    try {
+      localQuiz = generateLocalQuiz({
+        text: content,
+        questionTypes,
+        difficulty,
+        numQuestions,
+        customTitle: customTitle.trim(),
+        sourceDocumentName: docName,
+        avoidQuestions,
+        batchIndex,
+        focusAngle,
+        seed,
+      });
+    } catch (err: any) {
+      setErrorMessage(
+        err?.message || 'Could not generate questions from the provided text. Please ensure there are enough complete sentences.'
+      );
+      return;
+    }
 
     // Record newly generated questions into document registry
     const newQuestionPrompts = localQuiz.questions.map((q: any) => q.question);

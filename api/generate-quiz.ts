@@ -35,10 +35,11 @@ async function extractTextFromFileData(base64Data?: string, mimeType?: string): 
         const { createRequire } = await import('module');
         const require = createRequire(import.meta.url);
         const { PDFParse } = require('pdf-parse');
-        const parser = new PDFParse(new Uint8Array(buffer));
+        const parser = new PDFParse({ data: buffer });
         await parser.load();
         const res = await parser.getText();
-        if (res?.text && res.text.trim().length > 25) {
+        await parser.destroy().catch(() => {});
+        if (res?.text && res.text.trim().length > 20) {
           return res.text.trim().slice(0, 50000);
         }
       } catch (pdfErr) {
