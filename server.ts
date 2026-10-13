@@ -448,7 +448,7 @@ ${avoidListText}
     if (msg.includes('503') || msg.includes('experiencing high demand') || msg.includes('UNAVAILABLE')) {
       friendlyError = 'Gemini AI is temporarily experiencing high traffic demand. You can click "Generate with Instant Engine" below to create your quiz instantly, or click Retry in a few seconds.';
     } else if (msg.includes('402') || msg.includes('credits are depleted') || msg.includes('RESOURCE_EXHAUSTED')) {
-      friendlyError = 'Gemini API credits are depleted. You can use the built-in Instant Engine below to generate your quiz right away without any API key or credits.';
+      friendlyError = 'Gemini API prepayment credits are depleted in your Google AI Studio project (Error 402). To generate quizzes without any credits or API key, paste your text or notes into the text box and click "Generate with Instant Engine", or top up credits at https://ai.studio/projects.';
     } else if (msg.includes('429') || msg.includes('quota') || msg.includes('rate limit')) {
       friendlyError = 'Gemini API rate limit reached. Click "Generate with Instant Engine" below to create your quiz immediately.';
     } else if (msg.includes('Could not load the default credentials') || msg.includes('GEMINI_API_KEY')) {

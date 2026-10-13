@@ -482,7 +482,9 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
       } else if (msg.includes('503') || msg.includes('experiencing high demand') || msg.includes('UNAVAILABLE')) {
         setErrorMessage('Gemini AI is temporarily experiencing high traffic demand. Click "Generate with Instant Engine" below to create your quiz instantly, or retry in a moment.');
       } else if (msg.includes('402') || msg.includes('credits are depleted') || msg.includes('RESOURCE_EXHAUSTED')) {
-        setErrorMessage('Gemini API credits are depleted. Click "Generate with Instant Engine" below to create your quiz right away without an API key.');
+        setErrorMessage(
+          'Gemini API prepayment credits are depleted (Error 402). Click "Generate with Instant Engine" below to create your quiz for free without any credits, or recharge credits in Google AI Studio.'
+        );
       } else if (msg.includes('default credentials') || msg.includes('GEMINI_API_KEY') || msg.includes('credentials')) {
         setErrorMessage('Gemini API key is not configured in this environment. Click "Generate with Instant Engine" below to generate your quiz right now.');
       } else if (msg.includes('Failed to fetch')) {
