@@ -268,6 +268,10 @@ export default function App() {
             onRetakeMissed={handleRetakeMissed}
             onNewQuiz={handleNewQuiz}
             onCreateMoreFromDoc={handleCreateMoreFromDoc}
+            onRetakeWithMode={(mode) => {
+              setActiveMode(mode);
+              setCurrentView('quiz');
+            }}
             onOpenFlashcards={() => {
               sound.playClick();
               setCurrentView('flashcards');

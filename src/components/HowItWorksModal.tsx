@@ -61,7 +61,7 @@ export const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClos
             <div>
               <p className="font-bold text-slate-900 dark:text-white">Engaging, Gamified Practice & History Records</p>
               <p className="mt-0.5 text-slate-500 dark:text-slate-400">
-                Earn streak multipliers, beat countdown timers in Arcade Mode, study 3D flashcards, get on-demand AI Coach memory tricks, and keep full records of all your past attempts and progress.
+                Simulate real tests in Exam Mode (answers and scores revealed at the end), earn streak combos in Arcade Mode, study 3D flashcards, get on-demand AI Coach memory tricks, and track all past attempt records.
               </p>
             </div>
           </div>

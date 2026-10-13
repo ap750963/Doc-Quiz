@@ -24,6 +24,14 @@ import {
   ShieldCheck,
   Compass,
   RefreshCw,
+  GraduationCap,
+  Timer,
+  Hash,
+  MessageSquare,
+  Award,
+  Mic,
+  Radio,
+  BookMarked,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DifficultyLevel, QuestionType, QuizMode, QuizTone, Quiz, FocusAngle } from '../types/quiz';
@@ -368,8 +376,9 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
         avoidQuestions,
       };
 
-      if (textInput.trim()) {
-        payload.content = textInput;
+      const effectiveContent = textInput.trim() || selectedFile?.textContent || '';
+      if (effectiveContent) {
+        payload.content = effectiveContent;
       }
 
       if (selectedFile?.base64Data) {
@@ -796,19 +805,14 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
 
         {/* Step 2: Question Types */}
         <div className="p-5 sm:p-7 border-b border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/40">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center">
-                  2
-                </span>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-display">
-                  Customize Question Types
-                </h2>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 ml-8 hidden sm:block">
-                Choose one or more question formats for your quiz.
-              </p>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 text-xs font-bold flex items-center justify-center">
+                2
+              </span>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white font-display">
+                Question Types
+              </h2>
             </div>
             <button
               type="button"
@@ -827,28 +831,24 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                 title: 'Multiple Choice',
                 shortTitle: 'MCQ',
                 icon: '🔘',
-                desc: 'Single correct answer from 4 choices',
               },
               {
                 id: 'true_false' as QuestionType,
                 title: 'True / False',
                 shortTitle: 'T / F',
                 icon: '⚖️',
-                desc: 'Binary statements to verify',
               },
               {
                 id: 'multiple_answer' as QuestionType,
                 title: 'Multi-Answer',
                 shortTitle: 'Multi',
                 icon: '☑️',
-                desc: 'Check all correct choices (2+)',
               },
               {
                 id: 'fill_blank' as QuestionType,
                 title: 'Fill in Blank',
                 shortTitle: 'Blanks',
                 icon: '✍️',
-                desc: 'Recall & type missing keyword',
               },
             ].map((type) => {
               const isChecked = questionTypes.includes(type.id);
@@ -857,7 +857,6 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                   key={type.id}
                   type="button"
                   onClick={() => toggleQuestionType(type.id)}
-                  title={type.desc}
                   className={`w-full min-w-0 py-2.5 sm:py-3 px-1 sm:px-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 relative ${
                     isChecked
                       ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20 shadow-xs font-bold'
@@ -878,19 +877,11 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
               );
             })}
           </div>
-          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center justify-between">
-            <span>
-              {questionTypes.length === 4
-                ? 'All 4 question formats active for maximum cognitive variety.'
-                : `${questionTypes.length} question format${questionTypes.length === 1 ? '' : 's'} enabled.`}
-            </span>
-            <span className="hidden sm:inline text-slate-400 dark:text-slate-500">Tap buttons to toggle</span>
-          </p>
         </div>
 
         {/* Step 3: Difficulty Levels */}
         <div className="p-5 sm:p-7 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-3">
             <span className="w-6 h-6 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-700 dark:text-pink-300 text-xs font-bold flex items-center justify-center">
               3
             </span>
@@ -898,9 +889,6 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
               Difficulty Level
             </h2>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 ml-8 hidden sm:block">
-            Tailor the cognitive challenge to your learning goals.
-          </p>
 
           {/* 4 Rounded Rectangle Buttons Placed Horizontally */}
           <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
@@ -909,28 +897,28 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                 id: 'easy' as DifficultyLevel,
                 title: 'Easy',
                 icon: '🌱',
-                desc: 'Direct recall, definitions & core facts',
+                desc: 'Easy',
                 activeClass: 'border-emerald-500 dark:border-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 ring-2 ring-emerald-500/20',
               },
               {
                 id: 'medium' as DifficultyLevel,
                 title: 'Medium',
                 icon: '⚡',
-                desc: 'Comprehension & cause-and-effect reasoning',
+                desc: 'Medium',
                 activeClass: 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500/20',
               },
               {
                 id: 'hard' as DifficultyLevel,
                 title: 'Hard',
                 icon: '🔥',
-                desc: 'Deep analytical synthesis, edge cases & nuances',
+                desc: 'Hard',
                 activeClass: 'border-rose-500 dark:border-rose-400 bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 ring-2 ring-rose-500/20',
               },
               {
                 id: 'mixed' as DifficultyLevel,
                 title: 'Mixed',
                 icon: '🎲',
-                desc: 'Dynamic progressive mix from Easy to Hard',
+                desc: 'Mixed',
                 activeClass: 'border-violet-500 dark:border-violet-400 bg-violet-50 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 ring-2 ring-violet-500/20',
               },
             ].map((level) => {
@@ -956,94 +944,85 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
               );
             })}
           </div>
-
-          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 truncate">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}:
-            </span>
-            <span>
-              {difficulty === 'easy' && 'Direct recall, definitions & core facts'}
-              {difficulty === 'medium' && 'Comprehension & cause-and-effect reasoning'}
-              {difficulty === 'hard' && 'Deep analytical synthesis, edge cases & nuances'}
-              {difficulty === 'mixed' && 'Balanced progression from Easy to Hard'}
-            </span>
-          </p>
         </div>
 
-        {/* Step 4: Mode, Count & Vibe */}
-        <div className="p-6 sm:p-8 bg-slate-50/50 dark:bg-slate-900/40">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Number of Questions */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Question Count
-                </label>
-                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">
-                  {numQuestions} {numQuestions === 1 ? 'Question' : 'Questions'}
-                  {isCustomCount && (
-                    <span className="ml-1 text-[11px] font-semibold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.5 rounded-md">
-                      Custom
-                    </span>
-                  )}
-                </span>
-              </div>
+        {/* Step 4: Mode, Count & Vibe - Redesigned Section */}
+        <div className="p-6 sm:p-8 bg-slate-50/70 dark:bg-slate-900/60 border-t border-slate-200/80 dark:border-slate-800">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-              {/* Quick Presets + Custom Button */}
-              <div className="grid grid-cols-5 gap-1.5 mb-2.5">
-                {[5, 10, 15, 20].map((count) => {
-                  const isSelected = !isCustomCount && numQuestions === count;
-                  return (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => handleSetPresetCount(count)}
-                      className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                      }`}
-                    >
-                      {count} Qs
-                    </button>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={handleEnableCustomCount}
-                  className={`py-2 text-xs font-bold rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                    isCustomCount
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-500/20'
-                      : 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-slate-600'
-                  }`}
-                  title="Enter custom number of questions"
-                >
-                  <PenTool className="w-3 h-3" />
-                  <span>Custom</span>
-                </button>
-              </div>
-
-              {/* Custom Question Count Panel */}
-              {isCustomCount ? (
-                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-indigo-200 dark:border-slate-700 shadow-xs animate-pop">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Custom Count:</span>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500">1 – 50 questions</span>
-                  </div>
-
+            {/* 1. Question Count Card */}
+            <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between h-full transition-all hover:border-slate-300 dark:hover:border-slate-700">
+              <div>
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleAdjustCustomCount(-1)}
-                      disabled={numQuestions <= 1}
-                      className="w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 disabled:opacity-40 flex items-center justify-center text-slate-700 dark:text-slate-200 font-bold transition-all cursor-pointer"
-                      title="Decrease by 1"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <Hash className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                      Question Count
+                    </h4>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-base font-extrabold text-indigo-600 dark:text-indigo-400 tabular-nums">
+                      {numQuestions}
+                    </span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-1">
+                      {numQuestions === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+                </div>
 
-                    <div className="relative flex-1">
+                {/* Preset Chips */}
+                <div className="grid grid-cols-5 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/80 rounded-xl mb-3">
+                  {[5, 10, 15, 20].map((count) => {
+                    const isSelected = !isCustomCount && numQuestions === count;
+                    return (
+                      <button
+                        key={count}
+                        type="button"
+                        onClick={() => handleSetPresetCount(count)}
+                        className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer tabular-nums ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-slate-200 dark:ring-slate-700'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {count}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={handleEnableCustomCount}
+                    className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                      isCustomCount
+                        ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs ring-1 ring-slate-200 dark:ring-slate-700'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Custom question count"
+                  >
+                    <PenTool className="w-3 h-3" />
+                    <span>Any</span>
+                  </button>
+                </div>
+
+                {/* Custom Stepper or Range Slider */}
+                {isCustomCount ? (
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-indigo-200/80 dark:border-indigo-900/40">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-2 font-medium">
+                      <span>Specific Target</span>
+                      <span className="tabular-nums">1 – 50 questions</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustCustomCount(-1)}
+                        disabled={numQuestions <= 1}
+                        className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                        title="Decrease by 1"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
                       <input
                         type="number"
                         min={1}
@@ -1051,40 +1030,42 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                         value={customInputVal}
                         onChange={handleCustomInputChange}
                         onBlur={handleCustomInputBlur}
-                        className="w-full text-center py-1.5 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 font-bold text-base text-slate-900 dark:text-white outline-none tabular-nums"
-                        placeholder="e.g. 12"
+                        className="flex-1 text-center py-1.5 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 font-bold text-sm text-slate-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 tabular-nums"
+                        placeholder="1 - 50"
                       />
+                      <button
+                        type="button"
+                        onClick={() => handleAdjustCustomCount(1)}
+                        disabled={numQuestions >= 50}
+                        className="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                        title="Increase by 1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleAdjustCustomCount(1)}
-                      disabled={numQuestions >= 50}
-                      className="w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 disabled:opacity-40 flex items-center justify-center text-slate-700 dark:text-slate-200 font-bold transition-all cursor-pointer"
-                      title="Increase by 1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800 text-[11px]">
+                      <span className="text-slate-400 dark:text-slate-500 font-medium">Quick add</span>
+                      <div className="flex items-center gap-1.5">
+                        {[1, 5, 10].map((increment) => (
+                          <button
+                            key={increment}
+                            type="button"
+                            onClick={() => handleAdjustCustomCount(increment)}
+                            className="px-2 py-0.5 rounded-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold transition-colors cursor-pointer tabular-nums"
+                          >
+                            +{increment}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-
-                  {/* Quick increments */}
-                  <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700">
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium mr-1">Quick add:</span>
-                    {[1, 5, 10].map((increment) => (
-                      <button
-                        key={increment}
-                        type="button"
-                        onClick={() => handleAdjustCustomCount(increment)}
-                        className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:hover:text-indigo-300 text-slate-600 dark:text-slate-300 text-[11px] font-semibold transition-colors cursor-pointer"
-                      >
-                        +{increment}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2">
-                  <div className="flex items-center gap-3">
+                ) : (
+                  <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800/80">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mb-1.5 font-medium">
+                      <span>Fine Slider</span>
+                      <span className="font-bold text-slate-900 dark:text-white tabular-nums">{numQuestions} Qs</span>
+                    </div>
                     <input
                       type="range"
                       min={3}
@@ -1095,125 +1076,182 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                         setNumQuestions(val);
                         setCustomInputVal(String(val));
                       }}
-                      className="w-full accent-indigo-600 cursor-pointer"
+                      className="w-full accent-indigo-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"
                     />
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-8 tabular-nums">
-                      {numQuestions}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleEnableCustomCount}
-                    className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold mt-1.5 inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <PenTool className="w-3 h-3" />
-                    <span>Set custom number (1 - 50)</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Quiz Game Mode */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-                Play Mode
-              </label>
-              <div className="space-y-2">
-                {[
-                  {
-                    id: 'practice' as QuizMode,
-                    title: 'Practice Mode',
-                    desc: 'Instant hints & didactic explanations',
-                    icon: '🎯',
-                  },
-                  {
-                    id: 'arcade' as QuizMode,
-                    title: 'Arcade Mode',
-                    desc: 'Timer countdown & streak combos',
-                    icon: '⚡',
-                  },
-                  {
-                    id: 'flashcards' as QuizMode,
-                    title: 'Flashcards',
-                    desc: '3D card flip self-paced review',
-                    icon: '🗂️',
-                  },
-                ].map((mode) => (
-                  <button
-                    key={mode.id}
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      setQuizMode(mode.id);
-                    }}
-                    className={`w-full p-2.5 rounded-lg border text-left flex items-center gap-3 transition-all cursor-pointer ${
-                      quizMode === mode.id
-                        ? 'bg-white dark:bg-slate-800 border-indigo-600 dark:border-indigo-500 shadow-xs ring-1 ring-indigo-500/20'
-                        : 'bg-white/80 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <span className="text-lg">{mode.icon}</span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
-                        {mode.title}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{mode.desc}</p>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                      <span>3 Min</span>
+                      <span>15 Mid</span>
+                      <span>30 Max</span>
                     </div>
-                  </button>
-                ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Persona / Tone */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-                Quiz Tone
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'fun' as QuizTone, title: 'Witty & Fun', emoji: '🎉' },
-                  { id: 'game_show' as QuizTone, title: 'Game Show', emoji: '🎙️' },
-                  { id: 'academic' as QuizTone, title: 'Academic', emoji: '🎓' },
-                  { id: 'direct' as QuizTone, title: 'Direct & Crisp', emoji: '🎯' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      sound.playClick();
-                      setTone(t.id);
-                    }}
-                    className={`p-2.5 rounded-lg border text-center transition-all cursor-pointer ${
-                      tone === t.id
-                        ? 'bg-white dark:bg-slate-800 border-indigo-600 dark:border-indigo-500 shadow-xs ring-1 ring-indigo-500/20 font-semibold'
-                        : 'bg-white/80 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    <span className="text-base block mb-0.5">{t.emoji}</span>
-                    <span className="text-xs text-slate-900 dark:text-white block truncate">{t.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Variety & Focus Angle */}
-            <div className="md:col-span-3 pt-5 border-t border-slate-200/80 dark:border-slate-800">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Question Variety & Focus Angle
-                  </label>
-                  {currentBatchNumber > 1 && (
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold">
-                      Batch #{currentBatchNumber}
-                    </span>
-                  )}
+            {/* 2. Play Mode Card */}
+            <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between h-full transition-all hover:border-slate-300 dark:hover:border-slate-700">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                      Play Mode
+                    </h4>
+                  </div>
                 </div>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline">
-                  Steers generation perspective across repeat quizzes
-                </span>
+
+                {/* Vertical Mode Selection List */}
+                <div className="space-y-2">
+                  {[
+                    {
+                      id: 'practice' as QuizMode,
+                      title: 'Practice Mode',
+                      icon: <Target className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
+                      bgActive: 'border-emerald-600 dark:border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30',
+                    },
+                    {
+                      id: 'exam' as QuizMode,
+                      title: 'Exam Mode',
+                      icon: <GraduationCap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />,
+                      bgActive: 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30',
+                    },
+                    {
+                      id: 'arcade' as QuizMode,
+                      title: 'Arcade Mode',
+                      icon: <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
+                      bgActive: 'border-amber-600 dark:border-amber-500 bg-amber-50/50 dark:bg-amber-950/30',
+                    },
+                    {
+                      id: 'flashcards' as QuizMode,
+                      title: 'Flashcards',
+                      icon: <BookMarked className="w-4 h-4 text-violet-600 dark:text-violet-400" />,
+                      bgActive: 'border-violet-600 dark:border-violet-500 bg-violet-50/50 dark:bg-violet-950/30',
+                    },
+                  ].map((mode) => {
+                    const isSelected = quizMode === mode.id;
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          setQuizMode(mode.id);
+                        }}
+                        className={`w-full py-2.5 px-3 rounded-xl border text-left flex items-center justify-between gap-3 transition-all cursor-pointer ${
+                          isSelected
+                            ? `${mode.bgActive} shadow-xs ring-1 ring-indigo-500/20 font-bold`
+                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center shrink-0">
+                            {mode.icon}
+                          </div>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {mode.title}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 text-[10px]">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+            </div>
+
+            {/* 3. Quiz Tone Card */}
+            <div className="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-xs flex flex-col justify-between h-full transition-all hover:border-slate-300 dark:hover:border-slate-700">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                        Quiz Tone
+                      </h4>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 capitalize">
+                    {tone.replace('_', ' ')}
+                  </span>
+                </div>
+
+                {/* 2x2 Clean Persona Grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      id: 'fun' as QuizTone,
+                      title: 'Witty & Fun',
+                      icon: <Sparkles className="w-4 h-4 text-amber-500" />,
+                    },
+                    {
+                      id: 'game_show' as QuizTone,
+                      title: 'Game Show',
+                      icon: <Mic className="w-4 h-4 text-rose-500" />,
+                    },
+                    {
+                      id: 'academic' as QuizTone,
+                      title: 'Academic',
+                      icon: <GraduationCap className="w-4 h-4 text-blue-500" />,
+                    },
+                    {
+                      id: 'direct' as QuizTone,
+                      title: 'Direct & Crisp',
+                      icon: <Radio className="w-4 h-4 text-emerald-500" />,
+                    },
+                  ].map((t) => {
+                    const isSelected = tone === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          setTone(t.id);
+                        }}
+                        className={`p-3 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-600 dark:border-indigo-500 ring-1 ring-indigo-500/20 shadow-xs font-bold'
+                            : 'bg-white dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center">
+                          {t.icon}
+                        </div>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                          {t.title}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+          </div>
+
+          {/* Variety & Focus Angle */}
+          <div className="pt-6 mt-6 border-t border-slate-200/80 dark:border-slate-800">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Question Variety & Focus Angle
+                </label>
+                {currentBatchNumber > 1 && (
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold">
+                    Batch #{currentBatchNumber}
+                  </span>
+                )}
+              </div>
+            </div>
 
               {/* 4 Rounded Rectangle Buttons Placed Horizontally */}
               <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full">
@@ -1272,23 +1310,6 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
                   );
                 })}
               </div>
-
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1.5 truncate">
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  {focusAngle === 'balanced' && 'Balanced:'}
-                  {focusAngle === 'deep_dive' && 'Deep Dive:'}
-                  {focusAngle === 'practical' && 'Practical:'}
-                  {focusAngle === 'random_shuffle' && 'Surprise Me:'}
-                  {focusAngle === 'quick_recall' && 'Key Terms:'}
-                </span>
-                <span>
-                  {focusAngle === 'balanced' && 'Covers a balanced, representative cross-section of the entire document'}
-                  {focusAngle === 'deep_dive' && 'Explores technical nuances, fine details and complex concepts'}
-                  {focusAngle === 'practical' && 'Tests real-world applications, scenarios and cause-and-effect reasoning'}
-                  {focusAngle === 'random_shuffle' && 'Maximizes variety with unexplored angles and secondary facts'}
-                  {focusAngle === 'quick_recall' && 'Focuses on vocabulary, key terms & definitions'}
-                </span>
-              </p>
             </div>
           </div>
         </div>

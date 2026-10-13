@@ -13,6 +13,135 @@ interface GenerateLocalQuizOptions {
   seed?: number | string;
 }
 
+interface ParsedMCQ {
+  qIndex: number;
+  question: string;
+  options: { letter: string; text: string; isMarked?: boolean }[];
+  answerString: string;
+  explanation: string;
+  isTrueFalse?: boolean;
+}
+
+function extractExistingMCQs(rawText: string): ParsedMCQ[] {
+  const text = rawText.replace(/\r\n/g, '\n');
+
+  // 1. Detect answer key table/list at the bottom of the document if present
+  const answerKeyMap = new Map<number, string>();
+  const answerKeyMatch = text.match(/(?:Answer\s*Key|Answers?|Solutions?)\s*[:\n]([\s\S]+)$/i);
+  if (answerKeyMatch) {
+    const keySection = answerKeyMatch[1];
+    const keyEntries = Array.from(
+      keySection.matchAll(/(?:(?:^|\s|,)(?:Q\.?\s*)?(\d+)[\.\-\:\s\)]*([A-Fa-f]|\([A-Fa-f]\)|True|False))/gi)
+    );
+    for (const m of keyEntries) {
+      const qNum = parseInt(m[1], 10);
+      const val = m[2].replace(/[\(\)\s]/g, '').toUpperCase();
+      answerKeyMap.set(qNum, val);
+    }
+  }
+
+  const lines = text.split('\n');
+  const extracted: ParsedMCQ[] = [];
+  let cur: ParsedMCQ | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    // Check if line is the start of an Answer Key section at the bottom
+    if (/^(?:Answer\s*Key|Answers?|Solutions?)\s*[:\n]?$/i.test(line)) {
+      if (cur && (cur.options.length >= 2 || cur.isTrueFalse)) {
+        extracted.push(cur);
+      }
+      cur = null;
+      break;
+    }
+
+    // Direct answer line under question: e.g. "Answer: B", "Ans: (b)", "Correct: Mitochondria"
+    const ansMatch = line.match(
+      /^(?:Ans(?:wer)?|Correct(?:\s*Option|\s*Answer)?|Key|Solution)\s*[:\.\-]?\s*([A-Fa-f]|\([A-Fa-f]\)|True|False|[^\n]+)/i
+    );
+    if (ansMatch && cur) {
+      cur.answerString = ansMatch[1].trim();
+      continue;
+    }
+
+    // Explanation line: e.g. "Explanation: Mitochondria is ..."
+    const expMatch = line.match(/^Explanation\s*[:\.\-]?\s*(.+)/i);
+    if (expMatch && cur) {
+      cur.explanation = expMatch[1].trim();
+      continue;
+    }
+
+    // Check for Question start: e.g. "1. ", "Q1. ", "Question 1: ", "(1) "
+    const qMatch = line.match(/^(\b(?:Q(?:uestion)?\.?\s*(\d+)|(\d+)[\.\)]|\((\d+)\)))\s*[:\.]?\s*(.+)/i);
+    if (qMatch) {
+      if (cur && (cur.options.length >= 2 || cur.isTrueFalse)) {
+        extracted.push(cur);
+      }
+      const numStr = qMatch[2] || qMatch[3] || qMatch[4] || '0';
+      const questionText = qMatch[5].trim();
+      const isTF = /\b(True\s*\/\s*False|True\s+or\s+False)\b/i.test(questionText);
+      cur = {
+        qIndex: parseInt(numStr, 10) || extracted.length + 1,
+        question: questionText,
+        options: [],
+        answerString: '',
+        explanation: '',
+        isTrueFalse: isTF,
+      };
+      continue;
+    }
+
+    // Check for inline options on a single line: (A) ... (B) ... (C) ... (D) ...
+    const inlineMatches = Array.from(
+      line.matchAll(
+        /(?:\(([A-Fa-f])\)|\[([A-Fa-f])\]|(?:\b|^)([A-Fa-f])[\.\)])\s*([^(\n\r\[]+?(?=(?:\s*(?:\([A-Fa-f]\)|\[[A-Fa-f]\]|[A-Fa-f][\.\)]))|$))/gi
+      )
+    );
+    if (inlineMatches.length >= 2 && cur) {
+      for (const m of inlineMatches) {
+        const letter = (m[1] || m[2] || m[3]).toUpperCase();
+        const optText = m[4].trim();
+        cur.options.push({ letter, text: optText });
+      }
+      continue;
+    }
+
+    // Check for single option: e.g. "A) ...", "(A) ...", "A. ...", "*B) ..."
+    const optMatch = line.match(/^(\([A-Fa-f]\)|\[[A-Fa-f]\]|\*?[A-Fa-f][\.\)\:])\s*(.+)/i);
+    if (optMatch && cur) {
+      const isMarked = line.startsWith('*') || line.includes('(correct)') || line.includes('[x]');
+      const letter = optMatch[1].replace(/[\*\(\)\[\]\.\:\s]/g, '').toUpperCase();
+      const optText = optMatch[2].replace(/\s*\((?:correct|answer)\)|\s*\*$/i, '').trim();
+      cur.options.push({ letter, text: optText, isMarked });
+      continue;
+    }
+
+    // Continuation line
+    if (cur) {
+      if (cur.options.length === 0) {
+        cur.question += ' ' + line;
+      } else {
+        cur.options[cur.options.length - 1].text += ' ' + line;
+      }
+    }
+  }
+
+  if (cur && (cur.options.length >= 2 || cur.isTrueFalse)) {
+    extracted.push(cur);
+  }
+
+  // Resolve correct answer for each extracted question
+  for (const q of extracted) {
+    if (answerKeyMap.has(q.qIndex)) {
+      q.answerString = answerKeyMap.get(q.qIndex) || q.answerString;
+    }
+  }
+
+  return extracted;
+}
+
 export function generateLocalQuiz({
   text,
   questionTypes,
@@ -26,6 +155,116 @@ export function generateLocalQuiz({
   seed = Date.now(),
 }: GenerateLocalQuizOptions): Quiz {
   const cleanText = text.trim();
+
+  // CHECK FIRST: Does the document already contain pre-existing MCQs / questions?
+  const existingMCQs = extractExistingMCQs(cleanText);
+
+  if (existingMCQs.length >= 1) {
+    // Directly use the real questions from the document!
+    const avoidSet = new Set(avoidQuestions.map((q) => q.toLowerCase().slice(0, 40)));
+    const unusedMCQs = existingMCQs.filter(
+      (m) => !avoidSet.has(m.question.toLowerCase().slice(0, 40))
+    );
+    const pool = unusedMCQs.length > 0 ? unusedMCQs : existingMCQs;
+
+    // Shift based on batch index to rotate through questions
+    const offset = ((batchIndex - 1) * numQuestions) % pool.length;
+    const rotated = [...pool.slice(offset), ...pool.slice(0, offset)];
+    const selectedMCQs = rotated.slice(0, numQuestions);
+
+    const questions: Question[] = selectedMCQs.map((mcq, idx) => {
+      const qId = `q_pdf_${mcq.qIndex}_${idx + 1}_${Date.now()}`;
+      // Clean question text of leading "1.", "Q1:", etc. if present
+      const cleanPrompt = mcq.question
+        .replace(/^(\b(?:Q(?:uestion)?\.?\s*\d+|\d+[\.\)]|\(\d+\)))\s*[:\.]?\s*/i, '')
+        .trim();
+
+      // Check if True/False
+      if (mcq.isTrueFalse || (mcq.options.length === 2 && mcq.options[0].text.toLowerCase() === 'true')) {
+        let isTrue = true;
+        if (/false/i.test(mcq.answerString)) isTrue = false;
+        return {
+          id: qId,
+          type: 'true_false',
+          difficulty: difficulty === 'mixed' ? (idx % 2 === 0 ? 'easy' : 'medium') : (difficulty as any),
+          question: cleanPrompt,
+          options: ['True', 'False'],
+          correctAnswer: [isTrue ? 'True' : 'False'],
+          explanation: mcq.explanation || `Answer: ${isTrue ? 'True' : 'False'} (from original document).`,
+          hint: 'Consider the factual basis of the statement directly from your study material.',
+          sourceQuote: mcq.question,
+        };
+      }
+
+      // Multiple choice options
+      const optTexts = mcq.options.map((o) => o.text);
+      while (optTexts.length < 4) {
+        optTexts.push(`Alternative ${optTexts.length + 1}`);
+      }
+
+      // Determine correct answer
+      let correctOptText = optTexts[0];
+      let ansLetter = '';
+
+      if (mcq.answerString) {
+        const letMatch = mcq.answerString.match(/^[(\[]?([A-Fa-f])[)\]\.\s]?/);
+        if (letMatch) {
+          ansLetter = letMatch[1].toUpperCase();
+        } else {
+          // If answer is textual (e.g. "Mitochondria"), find matching option
+          const matching = optTexts.find(
+            (o) => o.toLowerCase() === mcq.answerString.toLowerCase() || o.toLowerCase().includes(mcq.answerString.toLowerCase())
+          );
+          if (matching) correctOptText = matching;
+        }
+      }
+
+      if (ansLetter) {
+        const letterIndex = ansLetter.charCodeAt(0) - 65; // 'A' -> 0, 'B' -> 1
+        if (mcq.options[letterIndex]) {
+          correctOptText = mcq.options[letterIndex].text;
+        } else if (optTexts[letterIndex]) {
+          correctOptText = optTexts[letterIndex];
+        }
+      } else {
+        const marked = mcq.options.find((o) => o.isMarked);
+        if (marked) correctOptText = marked.text;
+      }
+
+      return {
+        id: qId,
+        type: 'multiple_choice',
+        difficulty: difficulty === 'mixed' ? (idx % 3 === 0 ? 'easy' : idx % 3 === 1 ? 'medium' : 'hard') : (difficulty as any),
+        question: cleanPrompt,
+        options: optTexts,
+        correctAnswer: [correctOptText],
+        explanation:
+          mcq.explanation ||
+          `The correct answer is "${correctOptText}", extracted directly from your PDF question bank.`,
+        hint: `Carefully evaluate the choices: ${optTexts.slice(0, 2).join(' vs ')}.`,
+        sourceQuote: mcq.question,
+      };
+    });
+
+    const firstLine = cleanText.split('\n')[0]?.replace(/[#*_-]/g, '').trim();
+    const derivedTitle =
+      customTitle?.trim() ||
+      (firstLine && firstLine.length < 50 ? `${firstLine} Practice Quiz` : 'PDF Exam Questions Quiz');
+
+    return {
+      id: 'quiz_' + Date.now(),
+      title: derivedTitle,
+      topic: 'Practice Exam / Questions',
+      summary: `Practice quiz featuring ${questions.length} questions extracted directly from your PDF question bank.`,
+      estimatedTimeMinutes: Math.max(1, Math.ceil(questions.length * 1.5)),
+      difficulty,
+      questions,
+      createdAt: Date.now(),
+      sourceDocumentName: sourceDocumentName || 'Uploaded Document',
+      sourceDocumentSnippet: cleanText.slice(0, 300),
+    };
+  }
+
   let sentences = cleanText
     .split(/(?<=[.?!])\s+|\n{2,}/)
     .map((s) => s.trim())

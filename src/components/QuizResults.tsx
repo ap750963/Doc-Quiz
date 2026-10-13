@@ -18,7 +18,7 @@ import {
   History,
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Quiz, QuizAttempt, Question } from '../types/quiz';
+import { Quiz, QuizAttempt, Question, QuizMode } from '../types/quiz';
 import { triggerQuizCompletionConfetti } from '../utils/confetti';
 import { sound } from '../utils/sound';
 
@@ -31,6 +31,7 @@ interface QuizResultsProps {
   onOpenFlashcards: () => void;
   onViewHistory?: () => void;
   onCreateMoreFromDoc?: () => void;
+  onRetakeWithMode?: (mode: QuizMode) => void;
 }
 
 export const QuizResults: React.FC<QuizResultsProps> = ({
@@ -42,6 +43,7 @@ export const QuizResults: React.FC<QuizResultsProps> = ({
   onOpenFlashcards,
   onViewHistory,
   onCreateMoreFromDoc,
+  onRetakeWithMode,
 }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'missed' | 'correct'>('all');
   const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
@@ -188,6 +190,28 @@ export const QuizResults: React.FC<QuizResultsProps> = ({
           </div>
         </div>
 
+        {/* Exam Mode Result Banner */}
+        {attempt.mode === 'exam' && (
+          <div className="mt-6 p-4 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/80 text-left flex items-start gap-3.5">
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 text-base shadow-xs">
+              📝
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white uppercase tracking-wider">
+                  Exam Mode
+                </span>
+                <p className="text-sm font-bold text-indigo-950 dark:text-indigo-100">
+                  Answers & Score Breakdown Revealed!
+                </p>
+              </div>
+              <p className="text-xs text-indigo-800/90 dark:text-indigo-300/90 mt-1 leading-relaxed">
+                You took this quiz in Exam Mode with zero hints or live feedback. Now that you've submitted, your score, question-by-question breakdown, and correct solutions are revealed below.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Quick Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
           {missedCount > 0 && (
@@ -197,6 +221,32 @@ export const QuizResults: React.FC<QuizResultsProps> = ({
             >
               <RotateCcw className="w-4 h-4" />
               <span>Retake Missed Only ({missedCount})</span>
+            </button>
+          )}
+
+          {onRetakeWithMode && attempt.mode === 'exam' && (
+            <button
+              onClick={() => {
+                sound.playClick();
+                onRetakeWithMode('practice');
+              }}
+              className="px-5 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Retake in Practice Mode</span>
+            </button>
+          )}
+
+          {onRetakeWithMode && attempt.mode !== 'exam' && (
+            <button
+              onClick={() => {
+                sound.playClick();
+                onRetakeWithMode('exam');
+              }}
+              className="px-5 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Try Exam Mode (Reveal at End)</span>
             </button>
           )}
 
@@ -387,18 +437,6 @@ export const QuizResults: React.FC<QuizResultsProps> = ({
                           {q.correctAnswer.join(', ')}
                         </span>
                       </div>
-                    </div>
-
-                    <div className="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block mb-1">
-                        Explanation:
-                      </span>
-                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{q.explanation}</p>
-                      {q.sourceQuote && (
-                        <p className="text-slate-500 dark:text-slate-400 italic mt-2 border-t border-slate-100 dark:border-slate-700 pt-1.5">
-                          "{q.sourceQuote}"
-                        </p>
-                      )}
                     </div>
                   </div>
                 )}

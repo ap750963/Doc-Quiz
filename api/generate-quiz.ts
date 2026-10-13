@@ -158,6 +158,27 @@ export default async function handler(req: any, res: any) {
     const promptText = `
 You are an expert quiz master and instructional designer. Your task is to generate a high-quality, fun, and engaging quiz strictly based on the provided document content.
 
+======================================================================
+CRITICAL RULE FOR DOCUMENTS / PDFs CONTAINING EXISTING MCQs OR TESTS:
+======================================================================
+Check if the provided document or text ALREADY contains multiple-choice questions (MCQs), test questions, exam problems, or question banks (e.g., numbered questions with options A, B, C, D / (a), (b), (c), (d), or question stems followed by answers):
+
+1. DO NOT GENERATE META-QUESTIONS ASKING ABOUT THE QUESTIONS!
+   - NEVER ask questions such as:
+     * "What does Question 1 ask?" (STRICTLY FORBIDDEN)
+     * "In the exam paper, which question mentions X?" (STRICTLY FORBIDDEN)
+     * "According to the test, what was choice B of Question 3?" (STRICTLY FORBIDDEN)
+     * "Which topic is tested in Question 5?" (STRICTLY FORBIDDEN)
+
+2. INSTEAD, ASK THE DIRECT QUESTIONS FROM THE PDF ITSELF!
+   - Extract the actual question from the document and set that as the quiz question (clean up prefixes like "1.", "Question 1:", "Q1." from the start of the string, but preserve the full wording of the question).
+   - Extract the options directly from the PDF (e.g., ["Option A text", "Option B text", "Option C text", "Option D text"]).
+   - Identify the correct answer (from the document's answer key, markings, or by solving the question accurately with your knowledge).
+   - Provide an insightful explanation for each question explaining why that answer is correct.
+   - If the document contains MORE questions than requested (${sanitizedNumQuestions}), select the top/most relevant ${sanitizedNumQuestions} questions.
+   - If the document contains FEWER questions than ${sanitizedNumQuestions}, include all the PDF's questions first, and then generate additional high-quality questions on the topics covered to reach ${sanitizedNumQuestions}.
+======================================================================
+
 SPECIFICATIONS:
 - Number of Questions: EXACTLY ${sanitizedNumQuestions} questions.
 - Difficulty Level: ${difficulty.toUpperCase()}.
@@ -167,7 +188,7 @@ SPECIFICATIONS:
   * If "mixed": Include a balanced progression of ~30% easy, ~40% medium, ~30% hard.
 - Allowed Question Types:
   ${requestedTypesStr}
-  * Distribute the questions across the selected types evenly.
+  * Distribute the questions across the selected types evenly (unless the document is an existing MCQ exam paper, in which case prioritize preserving the original question formats).
 - Tone: ${toneInstructions[tone] || toneInstructions.fun}
 - Focus Angle (Batch #${batchIndex}): ${angleInstructions[focusAngle] || angleInstructions.balanced}
 ${avoidListText}
@@ -206,7 +227,7 @@ ${avoidListText}
     });
 
     const generateParams: any = {
-      model: 'gemini-3.1-flash-lite',
+      model: 'gemini-3.8-flash',
       contents: contents.length === 1 ? contents[0] : { parts: contents },
       config: {
         systemInstruction:

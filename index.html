@@ -28,6 +28,127 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
       (function() {
+        // Intercept Vite HMR development websocket in Cloud Run / iFrame preview
+        var RealWebSocket = window.WebSocket;
+        if (RealWebSocket) {
+          function MockViteWebSocket(url, protocols) {
+            this.url = String(url);
+            this.protocol = Array.isArray(protocols) ? protocols[0] : (protocols || 'vite-hmr');
+            this.readyState = 1; // WebSocket.OPEN
+            this.OPEN = 1;
+            this.CONNECTING = 0;
+            this.CLOSING = 2;
+            this.CLOSED = 3;
+            this.binaryType = 'blob';
+            this.bufferedAmount = 0;
+            this.extensions = '';
+            this.listeners = {};
+            this.onopen = null;
+            this.onclose = null;
+            this.onerror = null;
+            this.onmessage = null;
+
+            var self = this;
+            setTimeout(function() {
+              if (typeof self.onopen === 'function') {
+                try { self.onopen({ type: 'open', target: self }); } catch (e) {}
+              }
+              if (self.listeners['open']) {
+                self.listeners['open'].forEach(function(fn) {
+                  try { fn({ type: 'open', target: self }); } catch (e) {}
+                });
+              }
+            }, 0);
+          }
+
+          MockViteWebSocket.prototype.addEventListener = function(evt, handler) {
+            if (typeof handler !== 'function') return;
+            if (evt === 'open' && this.readyState === 1) {
+              var self = this;
+              setTimeout(function() {
+                try { handler({ type: 'open', target: self }); } catch (e) {}
+              }, 0);
+            }
+            this.listeners[evt] = this.listeners[evt] || [];
+            this.listeners[evt].push(handler);
+          };
+
+          MockViteWebSocket.prototype.removeEventListener = function(evt, handler) {
+            if (!this.listeners[evt]) return;
+            this.listeners[evt] = this.listeners[evt].filter(function(h) { return h !== handler; });
+          };
+
+          MockViteWebSocket.prototype.dispatchEvent = function() {
+            return true;
+          };
+
+          MockViteWebSocket.prototype.send = function() {};
+
+          MockViteWebSocket.prototype.close = function(code, reason) {
+            this.readyState = 3;
+            var event = { wasClean: true, code: code || 1000, reason: reason || '', target: this };
+            if (typeof this.onclose === 'function') {
+              try { this.onclose(event); } catch (e) {}
+            }
+            if (this.listeners['close']) {
+              this.listeners['close'].forEach(function(fn) {
+                try { fn(event); } catch (e) {}
+              });
+            }
+          };
+
+          MockViteWebSocket.OPEN = 1;
+          MockViteWebSocket.CONNECTING = 0;
+          MockViteWebSocket.CLOSING = 2;
+          MockViteWebSocket.CLOSED = 3;
+
+          window.WebSocket = function(url, protocols) {
+            var isViteHmr = false;
+            if (protocols === 'vite-hmr' || (Array.isArray(protocols) && protocols.indexOf('vite-hmr') !== -1)) {
+              isViteHmr = true;
+            }
+            if (typeof url === 'string' && (url.includes('vite') || url.includes('@vite') || url.includes('/@vite/client'))) {
+              isViteHmr = true;
+            }
+
+            if (isViteHmr) {
+              return new MockViteWebSocket(url, protocols);
+            }
+            return new RealWebSocket(url, protocols);
+          };
+
+          window.WebSocket.prototype = RealWebSocket.prototype;
+          window.WebSocket.OPEN = RealWebSocket.OPEN || 1;
+          window.WebSocket.CONNECTING = RealWebSocket.CONNECTING || 0;
+          window.WebSocket.CLOSING = RealWebSocket.CLOSING || 2;
+          window.WebSocket.CLOSED = RealWebSocket.CLOSED || 3;
+        }
+
+        // Suppress benign Vite HMR websocket proxy notices in AI Studio cloud iframe
+        window.addEventListener('error', function(e) {
+          if (e.message && e.message.includes('WebSocket closed without opened')) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+          if (e.reason && String(e.reason).includes('WebSocket closed without opened')) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        });
+        var originalConsoleError = console.error;
+        console.error = function() {
+          var firstArg = arguments[0];
+          if (typeof firstArg === 'string' && firstArg.includes('WebSocket closed without opened')) {
+            return;
+          }
+          if (firstArg instanceof Error && firstArg.message.includes('WebSocket closed without opened')) {
+            return;
+          }
+          originalConsoleError.apply(console, arguments);
+        };
+
         try {
           var saved = localStorage.getItem('docuquiz_theme');
           if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {

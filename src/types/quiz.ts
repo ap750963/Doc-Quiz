@@ -6,7 +6,7 @@ export type QuestionType =
 
 export type DifficultyLevel = 'easy' | 'medium' | 'hard' | 'mixed';
 
-export type QuizMode = 'practice' | 'arcade' | 'flashcards';
+export type QuizMode = 'practice' | 'arcade' | 'flashcards' | 'exam';
 
 export type QuizTone = 'fun' | 'game_show' | 'academic' | 'direct';
 

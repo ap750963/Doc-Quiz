@@ -111,9 +111,21 @@ export const SavedQuizzesModal: React.FC<SavedQuizzesModalProps> = ({
                         onSelectQuiz(q, 'practice');
                       }}
                       className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      title="Practice with instant feedback"
                     >
                       <Play className="w-3.5 h-3.5 fill-white" />
-                      <span>Play</span>
+                      <span>Practice</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        sound.playClick();
+                        onSelectQuiz(q, 'exam');
+                      }}
+                      className="px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      title="Exam Mode: Answers and score revealed at the end"
+                    >
+                      <span>Exam</span>
                     </button>
 
                     <button
