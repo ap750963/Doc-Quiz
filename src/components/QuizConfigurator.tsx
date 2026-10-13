@@ -465,11 +465,26 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
     } catch (err: any) {
       console.error('Quiz generation error:', err);
       sound.playIncorrect();
-      const msg = err.message || '';
+      let msg = err.message || '';
+      try {
+        if (msg.startsWith('{') && msg.includes('"error"')) {
+          const parsed = JSON.parse(msg);
+          if (parsed.error?.message) {
+            msg = parsed.error.message;
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       if (err.name === 'AbortError') {
         setErrorMessage('The request took longer than expected. You can retry with fewer questions or use the built-in instant engine.');
+      } else if (msg.includes('503') || msg.includes('experiencing high demand') || msg.includes('UNAVAILABLE')) {
+        setErrorMessage('Gemini AI is temporarily experiencing high traffic demand. Click "Generate with Instant Engine" below to create your quiz instantly, or retry in a moment.');
+      } else if (msg.includes('402') || msg.includes('credits are depleted') || msg.includes('RESOURCE_EXHAUSTED')) {
+        setErrorMessage('Gemini API credits are depleted. Click "Generate with Instant Engine" below to create your quiz right away without an API key.');
       } else if (msg.includes('default credentials') || msg.includes('GEMINI_API_KEY') || msg.includes('credentials')) {
-        setErrorMessage('Gemini API key is not configured in this environment (e.g. shared preview or deployment). Click "Instant Engine" below to generate your quiz right now without an API key.');
+        setErrorMessage('Gemini API key is not configured in this environment. Click "Generate with Instant Engine" below to generate your quiz right now.');
       } else if (msg.includes('Failed to fetch')) {
         setErrorMessage('Connection interrupted or server unreachable. You can retry or use the built-in instant engine.');
       } else {
@@ -481,13 +496,39 @@ export const QuizConfigurator: React.FC<QuizConfiguratorProps> = ({
     }
   };
 
-  const handleGenerateOffline = () => {
+  const handleGenerateOffline = async () => {
     sound.playClick();
     setErrorMessage(null);
-    const content = textInput.trim() || selectedFile?.textContent || '';
+    let content = textInput.trim() || selectedFile?.textContent || '';
+    if (!content && selectedFile?.base64Data) {
+      // If text extraction is still running or pending, extract now
+      try {
+        const extractRes = await fetch('/api/extract-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fileData: {
+              data: selectedFile.base64Data,
+              mimeType: selectedFile.mimeType,
+              filename: selectedFile.name,
+            },
+          }),
+        });
+        if (extractRes.ok) {
+          const data = await extractRes.json();
+          if (data.text) {
+            content = data.text;
+            setSelectedFile((prev) => (prev ? { ...prev, textContent: data.text } : prev));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (!content) {
       setErrorMessage(
-        'The Instant Engine requires readable text. Please paste your text directly into the text area or select a document with extractable text.'
+        'The Instant Engine requires readable text. Please paste your text directly into the text area or upload a readable document.'
       );
       return;
     }

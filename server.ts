@@ -373,10 +373,18 @@ ${avoidListText}
         response = await ai.models.generateContent(fallbackParams);
       } catch (fallbackErr: any) {
         console.warn('Gemini fallback failed:', fallbackErr.message);
-        if (effectiveText) {
-          console.warn('Falling back to built-in generator due to Gemini API failure...');
+        
+        // If Gemini is overloaded (503), quota exceeded (429), or depleted (402),
+        // seamlessly fall back to the built-in Instant Engine so the user always gets their quiz.
+        let textToUse = effectiveText;
+        if (!textToUse && fileData?.data) {
+          textToUse = await extractTextFromFileData(fileData.data, fileData.mimeType);
+        }
+
+        if (textToUse && textToUse.trim().length > 0) {
+          console.warn('Falling back to built-in generator due to Gemini API outage/quota...');
           const fallbackQuiz = generateLocalQuiz({
-            text: effectiveText,
+            text: textToUse,
             questionTypes: questionTypes as QuestionType[],
             difficulty: difficulty as DifficultyLevel,
             numQuestions: sanitizedNumQuestions,
@@ -386,7 +394,7 @@ ${avoidListText}
             focusAngle: focusAngle as FocusAngle,
             seed,
           });
-          return res.json({ success: true, quiz: fallbackQuiz, fallback: true });
+          return res.json({ success: true, quiz: fallbackQuiz, fallback: true, source: 'instant_engine' });
         }
         throw fallbackErr;
       }
@@ -422,10 +430,31 @@ ${avoidListText}
     return res.json({ success: true, quiz: quizData });
   } catch (error: any) {
     console.error('Error generating quiz:', error);
-    const msg = error.message || '';
-    const friendlyError = msg.includes('Could not load the default credentials')
-      ? 'Gemini API key is not configured in this environment (shared preview or deployment). Please attach GEMINI_API_KEY in Settings > Secrets, or paste document text to generate with the Instant Engine.'
-      : msg || 'Failed to generate quiz. Please check your document and try again.';
+    let msg = error.message || '';
+    
+    // If error is raw JSON from Gemini (e.g. {"error":{"code":503,...}} or 402/429)
+    try {
+      if (msg.startsWith('{') && msg.includes('"error"')) {
+        const parsed = JSON.parse(msg);
+        if (parsed.error?.message) {
+          msg = parsed.error.message;
+        }
+      }
+    } catch {
+      // ignore JSON parse error
+    }
+
+    let friendlyError = msg;
+    if (msg.includes('503') || msg.includes('experiencing high demand') || msg.includes('UNAVAILABLE')) {
+      friendlyError = 'Gemini AI is temporarily experiencing high traffic demand. You can click "Generate with Instant Engine" below to create your quiz instantly, or click Retry in a few seconds.';
+    } else if (msg.includes('402') || msg.includes('credits are depleted') || msg.includes('RESOURCE_EXHAUSTED')) {
+      friendlyError = 'Gemini API credits are depleted. You can use the built-in Instant Engine below to generate your quiz right away without any API key or credits.';
+    } else if (msg.includes('429') || msg.includes('quota') || msg.includes('rate limit')) {
+      friendlyError = 'Gemini API rate limit reached. Click "Generate with Instant Engine" below to create your quiz immediately.';
+    } else if (msg.includes('Could not load the default credentials') || msg.includes('GEMINI_API_KEY')) {
+      friendlyError = 'Gemini API key is not configured in this environment. Click "Generate with Instant Engine" below to generate your quiz right now.';
+    }
+
     return res.status(500).json({ error: friendlyError });
   }
 });
